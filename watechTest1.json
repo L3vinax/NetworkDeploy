@@ -65,6 +65,20 @@
                 "description": "IP range for hub virtual network"
             }
         },
+        "spokeVnetName": {
+            "type": "string",
+            "defaultValue": "vn-spoke1",
+            "metadata": {
+                "description": "Name for hub virtual network."
+            }
+        },
+        "spokeVnetIPrange": {
+            "type": "string",
+            "defaultValue": "10.1.0.0/16",
+            "metadata": {
+                "description": "IP range for hub virtual network"
+            }
+        },
         "hubSubnet1Name": {
             "type": "string",
             "defaultValue": "GatewaySubnet",
@@ -77,6 +91,48 @@
             "defaultValue": "10.0.0.0/24",
             "metadata": {
                 "description": "Hub subnet 1 ip range"
+            }
+        },
+                "hubSubnet1Name": {
+            "type": "string",
+            "defaultValue": "BastionSubnet",
+            "metadata": {
+                "description": "Hub network subnet 1 name (Bastion Subnet)"
+            }
+        },
+        "hubSubnet1IPrange": {
+            "type": "string",
+            "defaultValue": "10.0.1.0/24",
+            "metadata": {
+                "description": "Hub subnet 1 ip range"
+            }
+        },
+        "spokeSubnet1Name": {
+            "type": "string",
+            "defaultValue": "virtualmachines",
+            "metadata": {
+                "description": "Spoke network subnet 1 name"
+            }
+        },
+        "spokeSubnet1IPrange": {
+            "type": "string",
+            "defaultValue": "10.1.0.0/24",
+            "metadata": {
+                "description": "Spoke subnet 1 ip range"
+            }
+        },
+        "spokeSubnet2Name": {
+            "type": "string",
+            "defaultValue": "storage",
+            "metadata": {
+                "description": "Spoke network subnet 2 name"
+            }
+        },
+        "spokeSubnet2IPrange": {
+            "type": "string",
+            "defaultValue": "10.1.1.0/24",
+            "metadata": {
+                "description": "Spoke subnet 2 ip range"
             }
         },
         "spokeSubnetUDR": {
