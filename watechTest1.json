@@ -1,0 +1,266 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2018-05-01/subscriptionDeploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "resourceGroupName": {
+            "type": "string",
+            "defaultValue": "rg-ocs-watechtest",
+            "metadata": {
+                "description": "Name for new Virtual Network"
+            }
+        },
+        "agencyTagValue": {
+            "type": "string",
+            "defaultValue": "cts",
+            "metadata": {
+                "description": "Value for Agency tag"
+            }
+        },
+        "billingTagValue": {
+            "type": "string",
+            "defaultValue": "12345",
+            "metadata": {
+                "description": "Value for Billing Code tag"
+            }
+        },
+        "businessTagValue": {
+            "type": "string",
+            "defaultValue": "ocs",
+            "metadata": {
+                "description": "Value for Business Group tag"
+            }
+        },
+        "ownerTagValue": {
+            "type": "string",
+            "defaultValue": "aaron",
+            "metadata": {
+                "description": "Value for Owner tag"
+            }
+        },
+        "ServiceTagValue": {
+            "type": "string",
+            "defaultValue": "defender",
+            "metadata": {
+                "description": "Value for Service tag"
+            }
+        },
+        "productionTagValue": {
+            "type": "string",
+            "defaultValue": "test",
+            "metadata": {
+                "description": "Value for Production tag"
+            }
+        },
+        "hubVnetName": {
+            "type": "string",
+            "defaultValue": "vn-hub1",
+            "metadata": {
+                "description": "Name for hub virtual network."
+            }
+        },
+        "hubVnetIPrange": {
+            "type": "string",
+            "defaultValue": "10.0.0.0/16",
+            "metadata": {
+                "description": "IP range for hub virtual network"
+            }
+        },
+        "hubSubnet1Name": {
+            "type": "string",
+            "defaultValue": "GatewaySubnet",
+            "metadata": {
+                "description": "Hub network subnet 1 name (Gateway Subnet)"
+            }
+        },
+        "hubSubnet1IPrange": {
+            "type": "string",
+            "defaultValue": "10.0.0.0/24",
+            "metadata": {
+                "description": "Hub subnet 1 ip range"
+            }
+        },
+        "spokeSubnetUDR": {
+            "type": "string",
+            "defaultValue": "rt-subnet",
+            "metadata": {
+                "description": "Route table for Spoke network subnets"
+            }
+        },
+        "bastionNSG": {
+            "type": "string",
+            "defaultValue": "nsg-bastion",
+            "metadata": {
+                "description": "NSG to allow Bastion"
+            }
+        }
+    },
+    "variables": {
+        "rdpPort": "3389",
+        "defaultLocation": "WestUS2",
+        "bastionSourceIP": "172.16.36.64/27",
+        "tagAgency": "Agency",
+        "tagBillingCode": "Billing Code",
+        "tagBusinessGroup": "Business Group",
+        "tagOwner": "Owner",
+        "tagService": "Service",
+        "tagProduction": "Production"
+    },
+    "resources": [
+        {
+            "type": "Microsoft.Resources/resourceGroups",
+            "apiVersion": "2022-09-01",
+            "name": "[parameters('resourceGroupName')]",
+            "location": "[variables('defaultLocation')]",
+            "tags": {
+                "[variables('tagAgency')]": "[parameters('agencyTagValue')]",
+                "[variables('tagBillingCode')]": "[parameters('billingTagValue')]",
+                "[variables('tagBusinessGroup')]": "[parameters('businessTagValue')]",
+                "[variables('tagOwner')]": "[parameters('ownerTagValue')]",
+                "[variables('tagService')]": "[parameters('serviceTagValue')]",
+                "[variables('tagProduction')]": "[parameters('productionTagValue')]"
+            }
+        },
+        {
+            "name": "routeTables",
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2021-04-01",
+            "resourceGroup": "[parameters('resourceGroupName')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Resources/resourceGroups', parameters('resourceGroupName'))]"
+            ],
+            "properties": {
+                "expressionEvaluationOptions": {
+                    "scope": "outer"
+                },
+                "mode": "Incremental",
+                "template": {
+                    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+                    "contentVersion": "1.0.0.0",
+                    "resources": [
+                        {
+                            "type": "Microsoft.Network/virtualNetworks",
+                            "apiVersion": "2021-08-01",
+                            "name": "myVirtualNetwork",
+                            "location": "[variables('defaultLocation')]",
+                            "properties": {
+                                "addressSpace": {
+                                    "addressPrefixes": [
+                                        "10.0.0.0/16"
+                                    ]
+                                },
+                                "subnets": [
+                                    {
+                                        "name": "mySubnet",
+                                        "properties": {
+                                            "addressPrefix": "10.0.0.0/24"
+                                        }
+                                    }
+                                ]
+                            }
+
+                        },
+                        {
+                            "type": "Microsoft.Network/routeTables",
+                            "apiVersion": "2022-09-01",
+                            "name": "[parameters('spokeSubnetUDR')]",
+                            "location": "[variables('defaultLocation')]",
+                            "properties": {
+                                "disableBgpRoutePropagation": true,
+                                "routes": [
+                                    {
+                                        "name": "to-cts-prod-mgmt-sn",
+                                        "properties": {
+                                            "addressPrefix": "172.16.36.96/27",
+                                            "nextHopType": "VirtualAppliance",
+                                            "nextHopIpAddress": "172.16.36.20",
+                                            "hasBgpOverride": false
+                                        }
+                                    },
+                                    {
+                                        "name": "to-cts-dns-mgmt-sn",
+                                        "properties": {
+                                            "addressPrefix": "172.17.255.0/28",
+                                            "nextHopType": "VirtualAppliance",
+                                            "nextHopIpAddress": "172.16.36.20",
+                                            "hasBgpOverride": false
+                                        }
+                                    },
+                                    {
+                                        "name": "to-cts-dns-sn",
+                                        "properties": {
+                                            "addressPrefix": "147.55.244.144/28",
+                                            "nextHopType": "VirtualAppliance",
+                                            "nextHopIpAddress": "172.16.36.20",
+                                            "hasBgpOverride": false
+                                        }
+                                    },
+                                    {
+                                        "name": "to-cts-prod-veeam-sn",
+                                        "properties": {
+                                            "addressPrefix": "172.16.37.0/26",
+                                            "nextHopType": "VirtualAppliance",
+                                            "nextHopIpAddress": "172.16.36.20",
+                                            "hasBgpOverride": false
+                                        }
+                                    },
+                                    {
+                                        "name": "to-cts-prod-zerto-sn",
+                                        "properties": {
+                                            "addressPrefix": "172.16.37.64/26",
+                                            "nextHopType": "VirtualAppliance",
+                                            "nextHopIpAddress": "172.16.36.20",
+                                            "hasBgpOverride": false
+                                        }
+                                    },
+                                    {
+                                        "name": "to-DefaultRoute",
+                                        "properties": {
+                                            "addressPrefix": "0.0.0.0/0",
+                                            "nextHopType": "VirtualAppliance",
+                                            "nextHopIpAddress": "172.16.36.20",
+                                            "hasBgpOverride": false
+                                        }
+                                    },
+                                    {
+                                        "name": "to-watech-smd-gis-dev-01-vnet",
+                                        "properties": {
+                                            "addressPrefix": "172.16.44.0/24",
+                                            "nextHopType": "VirtualAppliance",
+                                            "nextHopIpAddress": "172.16.36.20",
+                                            "hasBgpOverride": false
+                                        }
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            "type": "Microsoft.Network/networkSecurityGroups",
+                            "apiVersion": "2022-09-01",
+                            "name": "[parameters('bastionNSG')]",
+                            "location": "[variables('defaultLocation')]",
+                            "properties": {
+                                "securityRules": [
+                                    {
+                                        "name": "BastionSubnet",
+                                        "properties": {
+                                            "protocol": "*",
+                                            "sourcePortRange": "*",
+                                            "destinationPortRange": "[variables('rdpPort')]",
+                                            "sourceAddressPrefix": "[variables('bastionSourceIP')]",
+                                            "destinationAddressPrefix": "VirtualNetwork",
+                                            "access": "Allow",
+                                            "priority": 100,
+                                            "direction": "Inbound"
+                                        }
+                                    }
+
+                                ]
+                            }
+                        }
+
+                    ]
+                }
+            }
+        }
+    ]
+}
