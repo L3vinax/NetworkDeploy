@@ -1,0 +1,422 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2018-05-01/subscriptionDeploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "resourceGroupName": {
+            "type": "string",
+            "defaultValue": "rg-ocs-watechtest",
+            "metadata": {
+                "description": "Name for new Virtual Network"
+            }
+        },
+        "agencyTagValue": {
+            "type": "string",
+            "defaultValue": "cts",
+            "metadata": {
+                "description": "Value for Agency tag"
+            }
+        },
+        "billingTagValue": {
+            "type": "string",
+            "defaultValue": "12345",
+            "metadata": {
+                "description": "Value for Billing Code tag"
+            }
+        },
+        "businessTagValue": {
+            "type": "string",
+            "defaultValue": "ocs",
+            "metadata": {
+                "description": "Value for Business Group tag"
+            }
+        },
+        "ownerTagValue": {
+            "type": "string",
+            "defaultValue": "aaron",
+            "metadata": {
+                "description": "Value for Owner tag"
+            }
+        },
+        "ServiceTagValue": {
+            "type": "string",
+            "defaultValue": "defender",
+            "metadata": {
+                "description": "Value for Service tag"
+            }
+        },
+        "productionTagValue": {
+            "type": "string",
+            "defaultValue": "test",
+            "metadata": {
+                "description": "Value for Production tag"
+            }
+        },
+        "hubVnetName": {
+            "type": "string",
+            "defaultValue": "vn-hub1",
+            "metadata": {
+                "description": "Name for hub virtual network."
+            }
+        },
+        "hubVnetIPrange": {
+            "type": "string",
+            "defaultValue": "10.0.0.0/16",
+            "metadata": {
+                "description": "IP range for hub virtual network"
+            }
+        },
+        "spokeVnetName": {
+            "type": "string",
+            "defaultValue": "vn-spoke1",
+            "metadata": {
+                "description": "Name for hub virtual network."
+            }
+        },
+        "spokeVnetIPrange": {
+            "type": "string",
+            "defaultValue": "10.1.0.0/16",
+            "metadata": {
+                "description": "IP range for hub virtual network"
+            }
+        },
+        "hubSubnet1Name": {
+            "type": "string",
+            "defaultValue": "GatewaySubnet",
+            "metadata": {
+                "description": "Hub network subnet 1 name (Gateway Subnet)"
+            }
+        },
+        "hubSubnet1IPrange": {
+            "type": "string",
+            "defaultValue": "10.0.0.0/24",
+            "metadata": {
+                "description": "Hub subnet 1 ip range"
+            }
+        },
+        "hubSubnet2Name": {
+            "type": "string",
+            "defaultValue": "BastionSubnet",
+            "metadata": {
+                "description": "Hub network subnet 1 name (Bastion Subnet)"
+            }
+        },
+        "hubSubnet2IPrange": {
+            "type": "string",
+            "defaultValue": "10.0.1.0/24",
+            "metadata": {
+                "description": "Hub subnet 1 ip range"
+            }
+        },
+        "spokeSubnet1Name": {
+            "type": "string",
+            "defaultValue": "virtualmachines",
+            "metadata": {
+                "description": "Spoke network subnet 1 name"
+            }
+        },
+        "spokeSubnet1IPrange": {
+            "type": "string",
+            "defaultValue": "10.1.0.0/24",
+            "metadata": {
+                "description": "Spoke subnet 1 ip range"
+            }
+        },
+        "spokeSubnet2Name": {
+            "type": "string",
+            "defaultValue": "storage",
+            "metadata": {
+                "description": "Spoke network subnet 2 name"
+            }
+        },
+        "spokeSubnet2IPrange": {
+            "type": "string",
+            "defaultValue": "10.1.1.0/24",
+            "metadata": {
+                "description": "Spoke subnet 2 ip range"
+            }
+        },
+        "spokeSubnetUDR": {
+            "type": "string",
+            "defaultValue": "rt-subnet",
+            "metadata": {
+                "description": "Route table for Spoke network subnets"
+            }
+        },
+        "hubToSpokePeer": {
+            "type": "string",
+            "defaultValue": "vnpHubToSpoke",
+            "metadata": {
+                "description": "Name for peer between hub and spoke"
+            }
+        },
+        "spokeToHubPeer": {
+            "type": "string",
+            "defaultValue": "vnpSpokeToHub",
+            "metadata": {
+                "description": "Name for peer between hub and spoke"
+            }
+        },
+        "bastionNSG": {
+            "type": "string",
+            "defaultValue": "nsg-bastion",
+            "metadata": {
+                "description": "NSG to allow Bastion"
+            }
+        }
+    },
+    "variables": {
+        "rdpPort": "3389",
+        "defaultLocation": "WestUS2",
+        "bastionSourceIP": "172.16.36.64/27",
+        "tagAgency": "Agency",
+        "tagBillingCode": "Billing Code",
+        "tagBusinessGroup": "Business Group",
+        "tagOwner": "Owner",
+        "tagService": "Service",
+        "tagProduction": "Production",
+        "subId": "7db9c7a6-7ec6-4aab-9c95-920a7562e4c1",
+        "hubVnetId": "[concat('subscriptions/', variables('subId'), '/resourceGroups/', parameters('resourceGroupName'), '/providers/Microsoft.Network/virtualNetworks/', parameters('hubVnetName'))]",
+        "spokeVnetId": "[concat('subscriptions/', variables('subId'), '/resourceGroups/', parameters('resourceGroupName'), '/providers/Microsoft.Network/virtualNetworks/', parameters('spokeVnetName'))]"
+    },
+    "resources": [
+        {
+            "type": "Microsoft.Resources/resourceGroups",
+            "apiVersion": "2022-09-01",
+            "name": "[parameters('resourceGroupName')]",
+            "location": "[variables('defaultLocation')]",
+            "tags": {
+                "[variables('tagAgency')]": "[parameters('agencyTagValue')]",
+                "[variables('tagBillingCode')]": "[parameters('billingTagValue')]",
+                "[variables('tagBusinessGroup')]": "[parameters('businessTagValue')]",
+                "[variables('tagOwner')]": "[parameters('ownerTagValue')]",
+                "[variables('tagService')]": "[parameters('serviceTagValue')]",
+                "[variables('tagProduction')]": "[parameters('productionTagValue')]"
+            }
+        },
+        {
+            "name": "routeTables",
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2021-04-01",
+            "resourceGroup": "[parameters('resourceGroupName')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Resources/resourceGroups', parameters('resourceGroupName'))]"
+            ],
+            "properties": {
+                "expressionEvaluationOptions": {
+                    "scope": "outer"
+                },
+                "mode": "Incremental",
+                "template": {
+                    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+                    "contentVersion": "1.0.0.0",
+                    "resources": [
+                        {
+                            "type": "Microsoft.Network/networkSecurityGroups",
+                            "apiVersion": "2022-09-01",
+                            "name": "[parameters('bastionNSG')]",
+                            "location": "[variables('defaultLocation')]",
+                            "properties": {
+                                "securityRules": [
+                                    {
+                                        "name": "BastionSubnet",
+                                        "properties": {
+                                            "protocol": "*",
+                                            "sourcePortRange": "*",
+                                            "destinationPortRange": "[variables('rdpPort')]",
+                                            "sourceAddressPrefix": "[variables('bastionSourceIP')]",
+                                            "destinationAddressPrefix": "VirtualNetwork",
+                                            "access": "Allow",
+                                            "priority": 100,
+                                            "direction": "Inbound"
+                                        }
+                                    }
+
+                                ]
+                            }
+                        },
+                        {
+                            "type": "Microsoft.Network/virtualNetworks",
+                            "apiVersion": "2021-08-01",
+                            "name": "[parameters('hubVnetName')]",
+                            "location": "[variables('defaultLocation')]",
+                            "properties": {
+                                "addressSpace": {
+                                    "addressPrefixes": [
+                                        "[parameters('hubVnetIPrange')]"
+                                    ]
+                                },
+                                "subnets": [
+                                    {
+                                        "name": "[parameters('hubSubnet1Name')]",
+                                        "properties": {
+                                            "addressPrefix": "[parameters('hubSubnet1IPrange')]"
+                                        }
+                                    },
+                                    {
+                                        "name": "[parameters('hubsubnet2Name')]",
+                                        "properties": {
+                                            "addressPrefix": "[parameters('hubsubnet2IPrange')]"
+                                        }
+                                    }
+                                ]
+                            }
+
+                        },
+                        {
+                            "type": "Microsoft.Network/virtualNetworks",
+                            "apiVersion": "2021-08-01",
+                            "name": "[parameters('spokeVnetName')]",
+                            "location": "[variables('defaultLocation')]",
+                            "properties": {
+                                "addressSpace": {
+                                    "addressPrefixes": [
+                                        "[parameters('spokeVnetIPrange')]"
+                                    ]
+                                },
+                                "subnets": [
+                                    {
+                                        "name": "[parameters('spokeSubnet1Name')]",
+                                        "properties": {
+                                            "addressPrefix": "[parameters('spokeSubnet1IPrange')]"
+                                        }
+                                    },
+                                    {
+                                        "name": "[parameters('spokeSubnet2Name')]",
+                                        "properties": {
+                                            "addressPrefix": "[parameters('spokesubnet2IPrange')]"
+                                        }
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
+                            "apiVersion": "2022-07-01",
+                            "name": "[concat(parameters('hubVnetName'), '/', parameters('hubToSpokePeer'))]",
+                            "dependsOn": [
+                                "[resourceId(variables('subid'), parameters('resourceGroupName'), 'Microsoft.Network/virtualNetworks', parameters('hubVnetName'))]",
+                                "[resourceId(variables('subId'), parameters('resourceGroupName'), 'Microsoft.Network/virtualNetworks', parameters('spokeVnetName'))]"
+                            ],
+                            "properties": {
+                                "peeringState": "Connected",
+                                "remoteVirtualNetwork": {
+                                    "id": "[variables('spokeVnetId')]"
+                                },
+                                "allowVirtualNetworkAccess": true,
+                                "allowForwardedTraffic": true,
+                                "allowGatewayTransit": false,
+                                "useRemoteGateways": false,
+                                "remoteAddressSpace": {
+                                    "addressPrefixes": [
+                                        "[parameters('spokeVnetIPrange')]"
+                                    ]
+                                },
+                                "peeringSyncLevel": "FullyInSync"
+                            }
+                        },
+                        {
+                            "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
+                            "apiVersion": "2022-07-01",
+                            "name": "[concat(parameters('spokeVnetName'), '/', parameters('spokeToHubPeer'))]",
+                            "dependsOn": [
+                                "[resourceId(variables('subid'), parameters('resourceGroupName'), 'Microsoft.Network/virtualNetworks', parameters('hubVnetName'))]",
+                                "[resourceId(variables('subId'), parameters('resourceGroupName'), 'Microsoft.Network/virtualNetworks', parameters('spokeVnetName'))]"
+                            ],
+                            "properties": {
+                                "peeringState": "Connected",
+                                "remoteVirtualNetwork": {
+                                    "id": "[variables('hubVnetId')]"
+                                },
+                                "allowVirtualNetworkAccess": true,
+                                "doNotVerifyRemoteGateways": true,
+                                "allowForwardedTraffic": true,
+                                "allowGatewayTransit": false,
+                                "useRemoteGateways": false,
+                                "remoteAddressSpace": {
+                                    "addressPrefixes": [
+                                        "[parameters('hubVnetIPrange')]"
+                                    ]
+                                },
+                                "peeringSyncLevel": "FullyInSync"
+                            }
+                        },
+                        {
+                            "type": "Microsoft.Network/routeTables",
+                            "apiVersion": "2022-07-01",
+                            "name": "[parameters('spokeSubnetUDR')]",
+                            "location": "[variables('defaultLocation')]",
+                            "properties": {
+                                "disableBgpRoutePropagation": true,
+                                "routes": [
+                                    {
+                                        "name": "to-cts-prod-mgmt-sn",
+                                        "properties": {
+                                            "addressPrefix": "172.16.36.96/27",
+                                            "nextHopType": "VirtualAppliance",
+                                            "nextHopIpAddress": "172.16.36.20",
+                                            "hasBgpOverride": false
+                                        }
+                                    },
+                                    {
+                                        "name": "to-cts-dns-mgmt-sn",
+                                        "properties": {
+                                            "addressPrefix": "172.17.255.0/28",
+                                            "nextHopType": "VirtualAppliance",
+                                            "nextHopIpAddress": "172.16.36.20",
+                                            "hasBgpOverride": false
+                                        }
+                                    },
+                                    {
+                                        "name": "to-cts-dns-sn",
+                                        "properties": {
+                                            "addressPrefix": "147.55.244.144/28",
+                                            "nextHopType": "VirtualAppliance",
+                                            "nextHopIpAddress": "172.16.36.20",
+                                            "hasBgpOverride": false
+                                        }
+                                    },
+                                    {
+                                        "name": "to-cts-prod-veeam-sn",
+                                        "properties": {
+                                            "addressPrefix": "172.16.37.0/26",
+                                            "nextHopType": "VirtualAppliance",
+                                            "nextHopIpAddress": "172.16.36.20",
+                                            "hasBgpOverride": false
+                                        }
+                                    },
+                                    {
+                                        "name": "to-cts-prod-zerto-sn",
+                                        "properties": {
+                                            "addressPrefix": "172.16.37.64/26",
+                                            "nextHopType": "VirtualAppliance",
+                                            "nextHopIpAddress": "172.16.36.20",
+                                            "hasBgpOverride": false
+                                        }
+                                    },
+                                    {
+                                        "name": "to-DefaultRoute",
+                                        "properties": {
+                                            "addressPrefix": "0.0.0.0/0",
+                                            "nextHopType": "VirtualAppliance",
+                                            "nextHopIpAddress": "172.16.36.20",
+                                            "hasBgpOverride": false
+                                        }
+                                    },
+                                    {
+                                        "name": "to-watech-smd-gis-dev-01-vnet",
+                                        "properties": {
+                                            "addressPrefix": "172.16.44.0/24",
+                                            "nextHopType": "VirtualAppliance",
+                                            "nextHopIpAddress": "172.16.36.20",
+                                            "hasBgpOverride": false
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                }
+            }
+        }
+    ]
+}
